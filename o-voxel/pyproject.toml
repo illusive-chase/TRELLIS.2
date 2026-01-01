@@ -2,7 +2,7 @@
 requires = [
     "setuptools>=64",
     "wheel",
-    "torch",
+    # "torch",
     "numpy",
     "plyfile",
     "trimesh",
@@ -22,13 +22,13 @@ authors = [
     { name = "Jianfeng Xiang", email = "belljig@outlook.com" }
 ]
 dependencies = [
-    "torch",
+    # "torch",
     "numpy",
     "plyfile",
     "trimesh",
     "tqdm",
     "zstandard",
     "easydict",
-    "cumesh @ git+https://github.com/JeffreyXiang/CuMesh.git",
-    "flex_gemm @ git+https://github.com/JeffreyXiang/FlexGEMM.git",
+    "cumesh @ git+https://github.com/illusive-chase/CuMesh.git",
+    "flex_gemm @ git+https://github.com/illusive-chase/FlexGEMM.git",
 ]
