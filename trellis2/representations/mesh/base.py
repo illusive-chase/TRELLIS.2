@@ -1,8 +1,10 @@
 from typing import *
-import torch
-from ..voxel import Voxel
+
 import cumesh
+import torch
 from flex_gemm.ops.grid_sample import grid_sample_3d
+
+from ..voxel import Voxel
 
 
 class Mesh:
@@ -14,28 +16,28 @@ class Mesh:
         self.vertices = vertices.float()
         self.faces = faces.int()
         self.vertex_attrs = vertex_attrs
-        
+
     @property
     def device(self):
         return self.vertices.device
-        
+
     def to(self, device, non_blocking=False):
         return Mesh(
             self.vertices.to(device, non_blocking=non_blocking),
             self.faces.to(device, non_blocking=non_blocking),
             self.vertex_attrs.to(device, non_blocking=non_blocking) if self.vertex_attrs is not None else None,
         )
-        
+
     def cuda(self, non_blocking=False):
         return self.to('cuda', non_blocking=non_blocking)
-        
+
     def cpu(self):
         return self.to('cpu')
-    
+
     def fill_holes(self, max_hole_perimeter=3e-2):
         vertices = self.vertices.cuda()
         faces = self.faces.cuda()
-        
+
         mesh = cumesh.CuMesh()
         mesh.init(vertices, faces)
         mesh.get_edges()
@@ -52,31 +54,40 @@ class Mesh:
             return
         mesh.fill_holes(max_hole_perimeter=max_hole_perimeter)
         new_vertices, new_faces = mesh.read()
-        
+
         self.vertices = new_vertices.to(self.device)
         self.faces = new_faces.to(self.device)
-        
+
     def remove_faces(self, face_mask: torch.Tensor):
         vertices = self.vertices.cuda()
         faces = self.faces.cuda()
-        
+
         mesh = cumesh.CuMesh()
         mesh.init(vertices, faces)
         mesh.remove_faces(face_mask)
         new_vertices, new_faces = mesh.read()
-        
+
         self.vertices = new_vertices.to(self.device)
         self.faces = new_faces.to(self.device)
-        
+
     def simplify(self, target=1000000, verbose: bool=False, options: dict={}):
         vertices = self.vertices.cuda()
         faces = self.faces.cuda()
-        
+
         mesh = cumesh.CuMesh()
         mesh.init(vertices, faces)
         mesh.simplify(target, verbose=verbose, options=options)
         new_vertices, new_faces = mesh.read()
-        
+
+        self.vertices = new_vertices.to(self.device)
+        self.faces = new_faces.to(self.device)
+
+    def unify_face_orientations(self) -> None:
+        mesh = cumesh.CuMesh()
+        mesh.init(self.vertices.cuda(), self.faces.cuda())
+        mesh.unify_face_orientations()
+        new_vertices, new_faces = mesh.read()
+
         self.vertices = new_vertices.to(self.device)
         self.faces = new_faces.to(self.device)
 
@@ -218,7 +229,7 @@ class MeshWithVoxel(Mesh, Voxel):
             self.voxel_shape,
             self.layout,
         )
-        
+
     def query_attrs(self, xyz):
         grid = ((xyz - self.origin) / self.voxel_size).reshape(1, -1, 3)
         vertex_attrs = grid_sample_3d(
@@ -229,6 +240,6 @@ class MeshWithVoxel(Mesh, Voxel):
             mode='trilinear'
         )[0]
         return vertex_attrs
-        
+
     def query_vertex_attrs(self):
         return self.query_attrs(self.vertices)

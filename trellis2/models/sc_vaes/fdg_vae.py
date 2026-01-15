@@ -1,23 +1,12 @@
 from typing import *
+
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from ...modules import sparse as sp
-from .sparse_unet_vae import (
-    SparseResBlock3d,
-    SparseConvNeXtBlock3d,
-    
-    SparseResBlockDownsample3d,
-    SparseResBlockUpsample3d,
-    SparseResBlockS2C3d,
-    SparseResBlockC2S3d,
-)
-from .sparse_unet_vae import (
-    SparseUnetVaeEncoder,
-    SparseUnetVaeDecoder,
-)
-from ...representations import Mesh
 from o_voxel.convert import flexible_dual_grid_to_mesh
+
+from ...modules import sparse as sp
+from ...representations import Mesh
+from .sparse_unet_vae import SparseUnetVaeDecoder, SparseUnetVaeEncoder
 
 
 class FlexiDualGridVaeEncoder(SparseUnetVaeEncoder):
@@ -41,15 +30,15 @@ class FlexiDualGridVaeEncoder(SparseUnetVaeEncoder):
             block_args,
             use_fp16,
         )
-        
+
     def forward(self, vertices: sp.SparseTensor, intersected: sp.SparseTensor, sample_posterior=False, return_raw=False):
         x = vertices.replace(torch.cat([
             vertices.feats - 0.5,
             intersected.feats.float() - 0.5,
         ], dim=1))
         return super().forward(x, sample_posterior, return_raw)
-    
-    
+
+
 class FlexiDualGridVaeDecoder(SparseUnetVaeDecoder):
     def __init__(
         self,
@@ -65,7 +54,7 @@ class FlexiDualGridVaeDecoder(SparseUnetVaeDecoder):
     ):
         self.resolution = resolution
         self.voxel_margin = voxel_margin
-        
+
         super().__init__(
             7,
             model_channels,
@@ -79,7 +68,7 @@ class FlexiDualGridVaeDecoder(SparseUnetVaeDecoder):
 
     def set_resolution(self, resolution: int) -> None:
         self.resolution = resolution
-        
+
     def forward(self, x: sp.SparseTensor, gt_intersected: sp.SparseTensor = None, **kwargs):
         decoded = super().forward(x, **kwargs)
         if self.training:
@@ -101,10 +90,10 @@ class FlexiDualGridVaeDecoder(SparseUnetVaeDecoder):
             intersected = h.replace(h.feats[..., 3:6] > 0)
             quad_lerp = h.replace(F.softplus(h.feats[..., 6:7]))
             mesh = [Mesh(*flexible_dual_grid_to_mesh(
-                h.coords[:, 1:], v.feats, i.feats, q.feats,
+                local_h.coords[:, 1:], v.feats, i.feats, q.feats,
                 aabb=[[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]],
                 grid_size=self.resolution,
                 train=False
-            )) for v, i, q in zip(vertices, intersected, quad_lerp)]
+            )) for local_h, v, i, q in zip(h, vertices, intersected, quad_lerp)]
             out_list[0] = mesh
             return out_list[0] if len(out_list) == 1 else tuple(out_list)
