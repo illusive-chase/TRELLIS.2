@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trellis2"
+version = "0.0.1"
+description = "TRELLIS.2 models, modules and representations packaged for import (fork of microsoft/TRELLIS.2)."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+# torch, o_voxel, cumesh, flex_gemm, nvdiffrast and the attention / sparse-conv
+# backends are CUDA builds that must match the local torch install, so they are
+# installed separately (see setup.sh) rather than resolved here.
+dependencies = [
+    "numpy",
+    "safetensors",
+    "huggingface_hub",
+    "easydict",
+    "Pillow",
+    "tqdm",
+    "trimesh",
+]
+
+[tool.setuptools.packages.find]
+include = ["trellis2*"]
+# Several sub-directories (modules/, models/sc_vaes/, trainers/...) have no
+# __init__.py and are imported as implicit namespace packages.
+namespaces = true
+
+[tool.setuptools.package-data]
+"*" = ["*.json"]

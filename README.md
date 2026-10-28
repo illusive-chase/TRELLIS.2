@@ -99,6 +99,16 @@ Data processing is streamlined for instant conversions that are fully **renderin
         --nvdiffrec             Install nvdiffrec
     ```
 
+### Installing `trellis2` as a package (this fork)
+
+To use the `trellis2` Python package from another project without adding this checkout to `PYTHONPATH`,
+install it with pip after the CUDA dependencies above (o-voxel, cumesh, flex_gemm, nvdiffrast):
+
+```sh
+pip install "git+https://github.com/illusive-chase/TRELLIS.2.git" --no-build-isolation
+python -c "import trellis2.models, trellis2.representations"
+```
+
 ## 📦 Pretrained Weights
 
 The pretrained model **TRELLIS.2-4B** is available on Hugging Face. Please refer to the model card there for more details.
